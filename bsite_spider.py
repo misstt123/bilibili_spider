@@ -307,6 +307,7 @@ if __name__ == '__main__':
     outer_url=get_outer_urls("冠状病毒",50)
     for item in outer_url:
         inner_url = get_inter_urls(item)
+        time.sleep(1)
         for p in inner_url:
             data = get_video_detail(p)
             insert_mysql(data)
