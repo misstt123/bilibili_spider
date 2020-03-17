@@ -187,7 +187,7 @@ def get_video_detail(id):
 # 连接数据库
 try:
     con = pymysql.connect(
-        host="121.36.108.203",
+        host="localhost",
         port=3306,
         user='root',
         password='qwe123456',
