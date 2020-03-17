@@ -187,7 +187,7 @@ def get_video_detail(id):
 # 连接数据库
 try:
     con = pymysql.connect(
-        host="localhost",
+        host="121.36.108.203",
         port=3306,
         user='root',
         password='qwe123456',
@@ -219,8 +219,7 @@ def insert_mysql(data):
         con.rollback()
         notice_wechat("插入数据库失败", "数据为： " + str(values))
         print("插入失败")
-    finally:
-        con.close()
+
 
 
 def toCSV(data, flags):
@@ -340,4 +339,5 @@ if __name__ == '__main__':
     # soup = BeautifulSoup(req.text, "html.parser")
     # print(soup.find("span", {'class': 'dm'})['title'])
     # print(soup.h1['title'])
+    con.close()
     notice_wechat("抓取成功啦", "请查看数据库")
