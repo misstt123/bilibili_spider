@@ -5,6 +5,8 @@ import random
 import time
 import json
 import pymysql
+import pandas as pd
+import csv
 import pymongo
 
 headers_nocookie = {
@@ -44,7 +46,7 @@ def notice_wechat(title, content):
         'text': title,
         'desp': content
     }
-    req = requests.post(api,data)
+    req = requests.post(api, data)
 
 
 def get_outer_urls(keyword, page):
@@ -108,7 +110,7 @@ def get_danMuKu(cid):
         # 拼接弹幕
         a = ''
         while (i < j):
-            a = a + results[i].text + "\n"
+            a = a + results[i].text + "---"
             i += 1
 
         return a
@@ -163,7 +165,7 @@ def get_video_detail(id):
         title = content['data']['title']
         danmuku = get_danMuKu(cid)
 
-        desp = content['data']["desc"]
+        desp = content['data']["desc"].replace('\n', ";;;").replace(' ', "")
         danmu = content['data']['stat']['danmaku']
         coin = content['data']['stat']['coin']
         dislike = content['data']['stat']['dislike']
@@ -181,14 +183,19 @@ def get_video_detail(id):
 
     return info
 
+
 # 连接数据库
-con=pymysql.connect(
-    host="localhost",
-    port=3306,
-    user='root',
-    password='qwe123456',
-    database='bsite'
-)
+try:
+    con = pymysql.connect(
+        host="localhost",
+        port=3306,
+        user='root',
+        password='qwe123456',
+        database='bsite'
+    )
+except:
+    notice_wechat("数据库连接失败啦", "啦啦啦啦！！")
+
 
 def insert_mysql(data):
     '''
@@ -196,24 +203,91 @@ def insert_mysql(data):
     :param data:
     :return:.
     '''
-    sql="insert into video(id,title,desp,danmu,coin,dislike,favorite,his_rank,like_count,now_rank,reply,share,view,danmuku) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+    sql = "insert into video(id,title,desp,danmu,coin,dislike,favorite,his_rank,like_count,now_rank,reply,share,view,danmuku) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
     # sql="insert into video(id,title,desp,danmu,coin,dislike,favorite,his_rank,like_count) values(%s,%s,%s,%s,%s,%s,%s,%s,%s);"
-    val=('测试1','测试内容1')
-    values_list=data.values()
-    values=tuple(values_list)
+    val = ('测试1', '测试内容1')
+    values_list = data.values()
+    values = tuple(values_list)
     # values=values[0:9]
     print(values)
-    cursor=con.cursor()
+    cursor = con.cursor()
     try:
-        cursor.execute(sql,values)
+        cursor.execute(sql, values)
         con.commit()
         print("插入成功")
     except:
         con.rollback()
-        notice_wechat("插入数据库失败","数据为： "+str(values))
+        notice_wechat("插入数据库失败", "数据为： " + str(values))
         print("插入失败")
     finally:
         con.close()
+
+
+def toCSV(data, flags):
+    '''
+    将抓取到的数据转换成CSV文件
+    :param data:数据
+    :param flags:标志位 0：元组，1：字典
+    :return:
+    '''
+    # write_clo = ['第一列', '第二列', '第三列', '第四列']
+    if flags == 1:
+        write_clo = data.values()
+    else:
+        write_clo = data
+    df = pd.DataFrame(columns=(write_clo))
+    df.to_csv("bilibili.csv", line_terminator="\n", index=False, mode='a', encoding='utf8')
+
+    # python2可以用file替代open
+    # with open("bilibili.csv", "w") as csvfile:
+    #     writer = csv.writer(csvfile)
+    #
+    #     # 先写入columns_name
+    #     writer.writerow(['第一列','第二列','第三列','第四列'])
+    #     # 写入多行用writerows
+    #     writer.writerows([[0, 1, 3], [1, 2, 3], [2, 3, 4]])
+
+
+
+# def send_email(filelist, content=""):
+#     '''
+#     完成后发送文件到邮箱
+#     :param data:
+#     :return:
+#     '''
+#     smtpHost = 'smtp.139.com'  # 139邮箱SMTP服务器
+#     sendAddr = '发送人邮箱'
+#     password = '邮箱密码'  # 163邮箱,则为授权码
+#     receiver = '收件人邮箱'
+#     subject = "邮件标题"
+#     content = '正文内容'
+#
+#     msg = MIMEMultipart()
+#     msg['from'] = sendAddr
+#     msg['to'] = receiver
+#     msg['Subject'] = subject
+#
+#     txt = MIMEText(content, 'plain', 'utf-8')
+#     msg.attach(txt)  # 添加邮件正文
+#
+#     # 添加附件,传送filelist列表里的文件
+#     filename = ""
+#     i = 0
+#     for file in filelist:
+#         i = i + 1
+#         filename = file
+#         # print(str(i),filename)
+#         part = MIMEApplication(open(filename, 'rb').read())
+#         part.add_header('Content-Disposition', 'attachment', filename=filename)
+#         msg.attach(part)
+#
+#     server = smtplib.SMTP(smtpHost, 25)  # SMTP协议默认端口为25
+#     # server.set_debuglevel(1)  # 出错时可以查看
+#
+#     server.login(sendAddr, password)
+#     server.sendmail(sendAddr, receiver, str(msg))
+#     print("\n" + str(len(filelist)) + "个文件发送成功")
+#     server.quit()
 
 
 if __name__ == '__main__':
@@ -223,15 +297,20 @@ if __name__ == '__main__':
     # url = "https://www.bilibili.com/video/av85859671?from=search&seid=10530534315860999666"
     # print(re.search('av\d+', url).group(0))
 
+
+
+    # '视频id': id, '标题': title, '描述': desp, '最新弹幕数量': danmu, '金币数量': coin, '不喜欢': dislike, '收藏': favorite,
+    # '最高排名': his_rank, '点赞数': like,
+    # '目前排名': now_rank, '回复数': reply, '分享数': share, '观看数': view, '弹幕内容': danmuku
+    top = ['视频id', '标题', '描述', '最新弹幕数量', '金币数量', '不喜欢', '收藏', '最高排名', '点赞数', '目前排名', '回复数', '分享数', '观看数', '弹幕内容']
+    toCSV(top, 0)
     outer_url=get_outer_urls("冠状病毒",50)
     for item in outer_url:
-        inner_url=get_inter_urls(item)
+        inner_url = get_inter_urls(item)
         for p in inner_url:
-            data=get_video_detail(p)
+            data = get_video_detail(p)
             insert_mysql(data)
-
-
-
+            toCSV(data, 1)
 
     # url = 'https://search.bilibili.com/all?keyword=冠状病毒'
     # urllst = get_outer_urls(20)  # 获取前20页的网址
@@ -260,3 +339,4 @@ if __name__ == '__main__':
     # soup = BeautifulSoup(req.text, "html.parser")
     # print(soup.find("span", {'class': 'dm'})['title'])
     # print(soup.h1['title'])
+    notice_wechat("抓取成功啦", "请查看数据库")
