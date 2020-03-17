@@ -165,7 +165,7 @@ def get_video_detail(id):
         title = content['data']['title']
         danmuku = get_danMuKu(cid)
 
-        desp = content['data']["desc"].replace('\n', ";;;").replace(' ', "")
+        desp = content['data']["desc"].replace('\n', "--").replace(' ','')
         danmu = content['data']['stat']['danmaku']
         coin = content['data']['stat']['coin']
         dislike = content['data']['stat']['dislike']
@@ -203,12 +203,12 @@ def insert_mysql(data):
     :param data:
     :return:.
     '''
-    sql = "insert into video(id,title,desp,danmu,coin,dislike,favorite,his_rank,like_count,now_rank,reply,share,view,danmuku) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-    # sql="insert into video(id,title,desp,danmu,coin,dislike,favorite,his_rank,like_count) values(%s,%s,%s,%s,%s,%s,%s,%s,%s);"
-    val = ('测试1', '测试内容1')
+    # sql = "insert into video(id,title,desp,danmu,coin,dislike,favorite,his_rank,like_count,now_rank,reply,share,view,danmuku) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+    sql="insert into video(id,title,desp) values(%s,%s,%s);"
+    # val = ('测试1', '测试内容1')
     values_list = data.values()
     values = tuple(values_list)
-    # values=values[0:9]
+    values=values[0:3]
     print(values)
     cursor = con.cursor()
     try:
@@ -217,9 +217,8 @@ def insert_mysql(data):
         print("插入成功")
     except:
         con.rollback()
-        notice_wechat("插入数据库失败", "数据为： " + str(values))
+        # notice_wechat("插入数据库失败", "数据为： " + str(values))
         print("插入失败")
-
 
 
 def toCSV(data, flags):
@@ -245,7 +244,6 @@ def toCSV(data, flags):
     #     writer.writerow(['第一列','第二列','第三列','第四列'])
     #     # 写入多行用writerows
     #     writer.writerows([[0, 1, 3], [1, 2, 3], [2, 3, 4]])
-
 
 
 # def send_email(filelist, content=""):
@@ -288,6 +286,18 @@ def toCSV(data, flags):
 #     print("\n" + str(len(filelist)) + "个文件发送成功")
 #     server.quit()
 
+def insert_mongo(data):
+    '''
+    插入mongodb数据库
+    :param data:
+    :return:
+    '''
+    myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+    db = myclient['blibli']
+    database = db['data']
+
+    database.insert_one(data)
+
 
 if __name__ == '__main__':
     # print(get_video_detail("av89309972"))
@@ -296,21 +306,23 @@ if __name__ == '__main__':
     # url = "https://www.bilibili.com/video/av85859671?from=search&seid=10530534315860999666"
     # print(re.search('av\d+', url).group(0))
 
-
-
     # '视频id': id, '标题': title, '描述': desp, '最新弹幕数量': danmu, '金币数量': coin, '不喜欢': dislike, '收藏': favorite,
     # '最高排名': his_rank, '点赞数': like,
     # '目前排名': now_rank, '回复数': reply, '分享数': share, '观看数': view, '弹幕内容': danmuku
-    top = ['视频id', '标题', '描述', '最新弹幕数量', '金币数量', '不喜欢', '收藏', '最高排名', '点赞数', '目前排名', '回复数', '分享数', '观看数', '弹幕内容']
-    toCSV(top, 0)
-    outer_url=get_outer_urls("冠状病毒",50)
-    for item in outer_url:
-        inner_url = get_inter_urls(item)
-        time.sleep(1)
-        for p in inner_url:
-            data = get_video_detail(p)
-            insert_mysql(data)
-            toCSV(data, 1)
+
+    # top = ['视频id', '标题', '描述', '最新弹幕数量', '金币数量', '不喜欢', '收藏', '最高排名', '点赞数', '目前排名', '回复数', '分享数', '观看数', '弹幕内容']
+    # toCSV(top, 0)
+    # outer_url=get_outer_urls("冠状病毒",50)
+    # for item in outer_url:
+    #     inner_url = get_inter_urls(item)
+    #     time.sleep(1)
+    #     for p in inner_url:
+    #         data = get_video_detail(p)
+    #         insert_mysql(data)
+    #         toCSV(data, 1)
+
+    data = get_video_detail("av85314885")
+    insert_mysql(data)
 
     # url = 'https://search.bilibili.com/all?keyword=冠状病毒'
     # urllst = get_outer_urls(20)  # 获取前20页的网址
