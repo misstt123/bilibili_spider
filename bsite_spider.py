@@ -441,6 +441,22 @@ def inner_urlBy_api(page, keyword):
     # return lis
     # print(lis)
 
+def ranking(rid,day):
+    '''
+    arc_type:0:全部投稿，1近期投稿
+    :param rid: 分区代号
+    :param day: 可以选1,3,7,30内榜单
+    '''
+    rank_api="https://api.bilibili.com/x/web-interface/ranking?rid={}&day={}&type=1&arc_type=0&jsonp=jsonp".format(rid,day)
+    res=requests.get(rank_api,headers=headers,timeout=30)
+    html_json=json.loads(res.text,encoding='utf-8')
+    content=html_json['data']['list']
+    lis=[]
+    for item in content:
+        lis.append(item['aid'])
+    # print(lis)
+    return lis
+
 
 if __name__ == '__main__':
     # print(get_video_detail("av89309972",1))
@@ -466,7 +482,8 @@ if __name__ == '__main__':
     # data = get_video_detail("av85314885",1)
     # insert_mysql(data)
 
-    inner_urlBy_api(10, "冠状病毒")
+    # inner_urlBy_api(10, "冠状病毒")
+    ranking(129,3)
 
     # print(current_time())
 

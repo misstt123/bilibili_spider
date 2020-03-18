@@ -9,13 +9,12 @@ import json
 import urllib.request
 import random
 import time
-import json
-import openpyxl
 from openpyxl import Workbook
 import xlsxwriter
 import time
 import datetime
-
+import json
+import openpyxl
 
 def getcid(av_num):  # 输入av号输出cid
     url_vid = "https://www.bilibili.com/video/av{}/".format(av_num)
