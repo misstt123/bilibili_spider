@@ -1,4 +1,3 @@
-
 import re
 from bs4 import BeautifulSoup
 import requests
@@ -44,12 +43,14 @@ headers = {
     # 'Cookie': 'CURRENT_FNVAL=16; _uuid=A44FDE55-496C-908C-481F-985FD001019907627infoc; buvid3=6327CADC-50E0-4418-8AFD-FC889EE49D79155823infoc; LIVE_BUVID=AUTO5615838360099805; rpdid=|(k|k)m~RR~Y0J\'ul)J)JY|u|; CURRENT_QUALITY=80; INTVER=1; sid=7wuvrlef; DedeUserID=327973223; DedeUserID__ckMd5=bcb4520ee29c8085; SESSDATA=2b276f03%2C1599878752%2Cf33af*31; bili_jct=74a605aedd7eb37ea6249ae8c85ea703; PVID=9'
 }
 
+
 def current_time():
     '''
     返回当前时间
     :return:
     '''
-    return time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
 
 def notice_wechat(title, content):
     '''server酱通知微信'''
@@ -128,7 +129,7 @@ def get_danMuKu(cid):
         return a
     except Exception as e:
         print(e)
-        notice_wechat("弹幕爬取失败",len(results))
+        notice_wechat("弹幕爬取失败", len(results))
 
     # dmlst = re.findall(r'<d.*?/d>', r2.text)
     #
@@ -153,8 +154,13 @@ url = 'https://api.bilibili.com/x/web-interface/view?aid={}'
 k = 0
 
 
-def get_video_detail(id):
-    '''获取b站视频详情'''
+def get_video_detail(id,flag):
+    '''
+
+    :param id: av号
+    :param flag: 标志为，1为包含'av',0为纯数字
+    :return:
+    '''
     global k
     k = k + 1
     print("记录编号： {}".format(k))
@@ -163,7 +169,6 @@ def get_video_detail(id):
         res = requests.get(full_url, headers=headers, cookies=cookies, timeout=30)
         time.sleep(random.random() + 1)
         print('正在爬取{}'.format(id))
-
         content = json.loads(res.text, encoding='utf-8')
         # test = content['data']
 
@@ -207,8 +212,7 @@ try:
         database='bsite'
     )
 except:
-    notice_wechat("数据库连接失败啦", "时间为： "+current_time())
-
+    notice_wechat("数据库连接失败啦", "时间为： " + current_time())
 
 
 def insert_mysql(data):
@@ -238,11 +242,9 @@ def insert_mysql(data):
         # print(type(e))
         # ss=str(e)
         # print(ss)
-        notice_wechat("插入数据库失败", "时间: " + current_time()+", av号： "+data['视频id']+", 异常信息： "+str(e))
+        notice_wechat("插入数据库失败", "时间: " + current_time() + ", av号： " + data['视频id'] + ", 异常信息： " + str(e))
         print("插入失败")
         print(e)
-
-
 
 
 def toCSV(data, flags):
@@ -261,7 +263,7 @@ def toCSV(data, flags):
         df = pd.DataFrame(columns=(write_clo))
         df.to_csv("bilibili.csv", line_terminator="\n", index=False, mode='a', encoding='utf8')
     except Exception as e:
-        notice_wechat("csv导入异常", "时间: " + current_time()+", av号： "+data['视频id'],", 异常信息： "+str(e))
+        notice_wechat("csv导入异常", "时间: " + current_time() + ", av号： " + data['视频id'], ", 异常信息： " + str(e))
         print(e)
 
     # python2可以用file替代open
@@ -355,18 +357,19 @@ def sentTest():
         # 登陆邮箱
         s.sendmail(sender, receiver, msg.as_string())
         # 发送邮件！
-        print ('发送邮件成功')
+        print('发送邮件成功')
     except smtplib.SMTPException:
-        print (current_time()+'发送邮件失败！！')
+        print(current_time() + '发送邮件失败！！')
 
-def sendMail(title,att_name):
+
+def sendMail(title, att_name):
     '''
     :param title: 邮件标题
     :param att_name: 附件名，生成的csv附件名
     :return:
     '''
     sender = 'goddong12580@163.com'
-    pwd='DVCDOGAJMNFJMRAC'
+    pwd = 'DVCDOGAJMNFJMRAC'
     receivers = '923219711@qq.com'  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
 
     # 创建一个带附件的实例
@@ -396,8 +399,8 @@ def sendMail(title,att_name):
     # message.attach(att2)
 
     try:
-        smtpObj = smtplib.SMTP_SSL('smtp.163.com',465)
-        smtpObj.login(sender,pwd)
+        smtpObj = smtplib.SMTP_SSL('smtp.163.com', 465)
+        smtpObj.login(sender, pwd)
         smtpObj.sendmail(sender, receivers, message.as_string())
         print
         "邮件发送成功"
@@ -405,8 +408,42 @@ def sendMail(title,att_name):
         print
         "Error: 无法发送邮件"
 
+
+def inner_urlBy_api(page, keyword):
+    '''
+    通过api抓取av号
+    :param keyword: 关键字
+    :param page: 页数
+    '''
+    lis = []
+    for i in range(page):
+
+        time.sleep(random.random()+1)
+        search_api = "https://api.bilibili.com/x/web-interface/search/all/v2?page={}&order=&keyword={}".format(i + 1,keyword)
+        # search_api = "https://api.bilibili.com/x/web-interface/search/all/v2?page={}&order=&keyword={}".format(1,keyword)
+
+        res=requests.get(search_api,headers=headers,timeout=30)
+        html_json=json.loads(res.text,encoding='utf-8')
+        data=html_json['data']['result'][8]['data']
+        for item in data:
+            lis.append(item['aid'])
+            # print(item['aid'])
+
+    # print(lis)
+    return lis
+
+    # if(len(data['data'])<=0):
+    #     print("为空")
+    # else:
+    #     print("不为空")
+    # lis.append(search_api)
+
+    # return lis
+    # print(lis)
+
+
 if __name__ == '__main__':
-    # print(get_video_detail("av89309972"))
+    # print(get_video_detail("av89309972",1))
 
     # get_danMuKu(152771439)
     # url = "https://www.bilibili.com/video/av85859671?from=search&seid=10530534315860999666"
@@ -423,11 +460,13 @@ if __name__ == '__main__':
     #     inner_url = get_inter_urls(item)
     #     time.sleep(0.5)
     #     for p in inner_url:
-    #         data = get_video_detail(p)
+    #         data = get_video_detail(p,1)
     #         insert_mysql(data)
     #         toCSV(data, 1)
-    # data = get_video_detail("av85314885")
+    # data = get_video_detail("av85314885",1)
     # insert_mysql(data)
+
+    inner_urlBy_api(10, "冠状病毒")
 
     # print(current_time())
 
@@ -460,5 +499,5 @@ if __name__ == '__main__':
     # print(soup.h1['title'])
 
     con.close()
-    #sendMail("数据抓取完成","bilibili.csv")
+    # sendMail("数据抓取完成","bilibili.csv")
     # notice_wechat("抓取成功啦", current_time()+"请查看数据库")
