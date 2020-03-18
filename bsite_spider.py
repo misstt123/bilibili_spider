@@ -1,3 +1,4 @@
+
 import re
 from bs4 import BeautifulSoup
 import requests
@@ -6,8 +7,13 @@ import time
 import json
 import pymysql
 import pandas as pd
+import html
 import csv
 import pymongo
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.header import Header
 
 headers_nocookie = {
     'Connection': 'keep-alive',
@@ -38,6 +44,12 @@ headers = {
     # 'Cookie': 'CURRENT_FNVAL=16; _uuid=A44FDE55-496C-908C-481F-985FD001019907627infoc; buvid3=6327CADC-50E0-4418-8AFD-FC889EE49D79155823infoc; LIVE_BUVID=AUTO5615838360099805; rpdid=|(k|k)m~RR~Y0J\'ul)J)JY|u|; CURRENT_QUALITY=80; INTVER=1; sid=7wuvrlef; DedeUserID=327973223; DedeUserID__ckMd5=bcb4520ee29c8085; SESSDATA=2b276f03%2C1599878752%2Cf33af*31; bili_jct=74a605aedd7eb37ea6249ae8c85ea703; PVID=9'
 }
 
+def current_time():
+    '''
+    返回当前时间
+    :return:
+    '''
+    return time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
 
 def notice_wechat(title, content):
     '''server酱通知微信'''
@@ -105,7 +117,7 @@ def get_danMuKu(cid):
         if (len(results) < 10):
             j = len(results)
 
-        print(len(results))
+        print("弹幕个数为： {}".format(len(results)))
 
         # 拼接弹幕
         a = ''
@@ -114,8 +126,9 @@ def get_danMuKu(cid):
             i += 1
 
         return a
-    except:
-        notice_wechat("弹幕爬取失败", "弹幕长度为： " + len(results))
+    except Exception as e:
+        print(e)
+        notice_wechat("弹幕爬取失败",len(results))
 
     # dmlst = re.findall(r'<d.*?/d>', r2.text)
     #
@@ -144,7 +157,7 @@ def get_video_detail(id):
     '''获取b站视频详情'''
     global k
     k = k + 1
-    print(k)
+    print("记录编号： {}".format(k))
     full_url = url.format(id[2:])
     try:
         res = requests.get(full_url, headers=headers, cookies=cookies, timeout=30)
@@ -152,7 +165,7 @@ def get_video_detail(id):
         print('正在爬取{}'.format(id))
 
         content = json.loads(res.text, encoding='utf-8')
-        test = content['data']
+        # test = content['data']
 
     except:
         print('error')
@@ -165,7 +178,7 @@ def get_video_detail(id):
         title = content['data']['title']
         danmuku = get_danMuKu(cid)
 
-        desp = content['data']["desc"].replace('\n', "--").replace(' ','')
+        desp = content['data']["desc"].replace('\n', "--").replace(' ', '')
         danmu = content['data']['stat']['danmaku']
         coin = content['data']['stat']['coin']
         dislike = content['data']['stat']['dislike']
@@ -194,7 +207,8 @@ try:
         database='bsite'
     )
 except:
-    notice_wechat("数据库连接失败啦", "啦啦啦啦！！")
+    notice_wechat("数据库连接失败啦", "时间为： "+current_time())
+
 
 
 def insert_mysql(data):
@@ -203,22 +217,32 @@ def insert_mysql(data):
     :param data:
     :return:.
     '''
-    # sql = "insert into video(id,title,desp,danmu,coin,dislike,favorite,his_rank,like_count,now_rank,reply,share,view,danmuku) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-    sql="insert into video(id,title,desp) values(%s,%s,%s);"
+    sql = "insert into video(id,title,desp,danmu,coin,dislike,favorite,his_rank,like_count,now_rank,reply,share,view,danmuku) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+    # sql = "insert into video(id,title,desp) values(%s,%s,%s);"
     # val = ('测试1', '测试内容1')
     values_list = data.values()
     values = tuple(values_list)
-    values=values[0:3]
+    # values = values[0:3]
     print(values)
+    # values=("av85314885","我是题目","我想这大概是过得最无聊的春节了吧，突如来的病毒让我们只能留在家中--原本我计划的休息也变成了肝视频--恨死了这该死的病毒了--希望大家保护好自己--出门记得戴口罩，尽量不去避免人员密集地方--拒绝野味~！！--武汉加油，中国加油------借物表：--模型：战双帕弥什-露西亚/Pocket-Vocaloid/Lct红枣/椛暗/军士--动作：绅士黑衣--镜头：绅士黑衣--场景：胧月兔--MME：Burner/thunter/Rui_斯基/Ikeno--原片地址：搬运：av3290381--https://www.youtube.com/watch?v=Z8piSgx_CUM搬运自https://www.youtube.com/watch?v=Z8piSgx_CUM")
+    # values[2]="eqeqweqw"
+
+    # print(len("【战双帕弥什】帕弥什病毒vs新型冠状病毒"))
     cursor = con.cursor()
     try:
         cursor.execute(sql, values)
         con.commit()
         print("插入成功")
-    except:
+    except Exception as e:
         con.rollback()
-        # notice_wechat("插入数据库失败", "数据为： " + str(values))
+        # print(type(e))
+        # ss=str(e)
+        # print(ss)
+        notice_wechat("插入数据库失败", "时间: " + current_time()+", av号： "+data['视频id']+", 异常信息： "+str(e))
         print("插入失败")
+        print(e)
+
+
 
 
 def toCSV(data, flags):
@@ -233,8 +257,12 @@ def toCSV(data, flags):
         write_clo = data.values()
     else:
         write_clo = data
-    df = pd.DataFrame(columns=(write_clo))
-    df.to_csv("bilibili.csv", line_terminator="\n", index=False, mode='a', encoding='utf8')
+    try:
+        df = pd.DataFrame(columns=(write_clo))
+        df.to_csv("bilibili.csv", line_terminator="\n", index=False, mode='a', encoding='utf8')
+    except Exception as e:
+        notice_wechat("csv导入异常", "时间: " + current_time()+", av号： "+data['视频id'],", 异常信息： "+str(e))
+        print(e)
 
     # python2可以用file替代open
     # with open("bilibili.csv", "w") as csvfile:
@@ -299,6 +327,84 @@ def insert_mongo(data):
     database.insert_one(data)
 
 
+def sentTest():
+    host = 'smtp.163.com'
+    # 设置发件服务器地址
+    port = 465
+    # 设置发件服务器端口号。注意，这里有SSL和非SSL两种形式，现在一般是SSL方式
+    sender = 'goddong12580@163.com'
+    # 设置发件邮箱，一定要自己注册的邮箱
+    pwd = 'LROTXBPDZSYYDEJK'
+    # 设置发件邮箱的授权码密码，根据163邮箱提示，登录第三方邮件客户端需要授权码
+    receiver = '923219711@qq.com'
+    # 设置邮件接收人，可以是QQ邮箱
+    body = '<h1>抓取完成</h1><p>请查看附件</p>'
+    # 设置邮件正文，这里是支持HTML的
+    msg = MIMEText(body, 'html')
+    # 设置正文为符合邮件格式的HTML内容
+    msg['subject'] = '打卡通知'
+    # 设置邮件标题
+    msg['from'] = sender
+    # 设置发送人
+    msg['to'] = receiver
+    # 设置接收人
+    try:
+        s = smtplib.SMTP_SSL(host, port)
+        # 注意！如果是使用SSL端口，这里就要改为SMTP_SSL
+        s.login(sender, pwd)
+        # 登陆邮箱
+        s.sendmail(sender, receiver, msg.as_string())
+        # 发送邮件！
+        print ('发送邮件成功')
+    except smtplib.SMTPException:
+        print (current_time()+'发送邮件失败！！')
+
+def sendMail(title,att_name):
+    '''
+    :param title: 邮件标题
+    :param att_name: 附件名，生成的csv附件名
+    :return:
+    '''
+    sender = 'goddong12580@163.com'
+    pwd='DVCDOGAJMNFJMRAC'
+    receivers = '923219711@qq.com'  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
+
+    # 创建一个带附件的实例
+    try:
+        message = MIMEMultipart()
+        message['From'] = Header("傻有钱企业", 'utf-8')
+        message['To'] = receivers
+        subject = title
+        message['Subject'] = Header(subject, 'utf-8')
+
+        # 邮件正文内容
+        message.attach(MIMEText('爬虫抓取完成数据抓取完成请下载附件', 'plain', 'utf-8'))
+
+        # 构造附件1，传送当前目录下的 test.txt 文件
+        att1 = MIMEText(open(att_name, 'rb').read(), 'base64', 'utf-8')
+        att1["Content-Type"] = 'application/octet-stream'
+        # 这里的filename可以任意写，写什么名字，邮件中显示什么名字
+        att1["Content-Disposition"] = 'attachment; filename="{}"'.format(att_name)
+        message.attach(att1)
+    except Exception as e:
+        print(e)
+
+    # 构造附件2，传送当前目录下的 runoob.txt 文件
+    # att2 = MIMEText(open('runoob.txt', 'rb').read(), 'base64', 'utf-8')
+    # att2["Content-Type"] = 'application/octet-stream'
+    # att2["Content-Disposition"] = 'attachment; filename="runoob.txt"'
+    # message.attach(att2)
+
+    try:
+        smtpObj = smtplib.SMTP_SSL('smtp.163.com',465)
+        smtpObj.login(sender,pwd)
+        smtpObj.sendmail(sender, receivers, message.as_string())
+        print
+        "邮件发送成功"
+    except smtplib.SMTPException:
+        print
+        "Error: 无法发送邮件"
+
 if __name__ == '__main__':
     # print(get_video_detail("av89309972"))
 
@@ -315,14 +421,15 @@ if __name__ == '__main__':
     # outer_url=get_outer_urls("冠状病毒",50)
     # for item in outer_url:
     #     inner_url = get_inter_urls(item)
-    #     time.sleep(1)
+    #     time.sleep(0.5)
     #     for p in inner_url:
     #         data = get_video_detail(p)
     #         insert_mysql(data)
     #         toCSV(data, 1)
+    # data = get_video_detail("av85314885")
+    # insert_mysql(data)
 
-    data = get_video_detail("av85314885")
-    insert_mysql(data)
+    # print(current_time())
 
     # url = 'https://search.bilibili.com/all?keyword=冠状病毒'
     # urllst = get_outer_urls(20)  # 获取前20页的网址
@@ -351,5 +458,7 @@ if __name__ == '__main__':
     # soup = BeautifulSoup(req.text, "html.parser")
     # print(soup.find("span", {'class': 'dm'})['title'])
     # print(soup.h1['title'])
+
     con.close()
-    notice_wechat("抓取成功啦", "请查看数据库")
+    #sendMail("数据抓取完成","bilibili.csv")
+    # notice_wechat("抓取成功啦", current_time()+"请查看数据库")
